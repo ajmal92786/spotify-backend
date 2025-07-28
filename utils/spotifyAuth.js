@@ -69,7 +69,7 @@ const refreshAccessToken = async () => {
   );
 
   access_token = response.data.access_token;
-  console.log("Refresh Token: ", access_token);
+  console.log("Refreshed Access Token: ", access_token);
 
   return access_token;
 };
