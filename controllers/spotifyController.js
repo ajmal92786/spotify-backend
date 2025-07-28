@@ -81,4 +81,63 @@ const getTopTracks = async (req, res) => {
   }
 };
 
+const getNowPlaying = async (req, res) => {
+  try {
+    const accessToken = spotifyAuth.getAccessToken();
+
+    // Validate access token
+    if (!accessToken) {
+      return res.status(401).json({
+        error: "Access token not found. Please login.",
+      });
+    }
+
+    const response = await axios.get(
+      "https://api.spotify.com/v1/me/player/currently-playing",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        validateStatus: () => true,
+      }
+    );
+
+    if (response.status === 204 || !response.data) {
+      return res.status(200).json({ message: "No song is currently playing." });
+    }
+
+    if (response.status === 401) {
+      return res
+        .status(401)
+        .json({ error: "Unauthorized. Access token may have expired." });
+    }
+
+    if (response.status >= 400) {
+      return res
+        .status(response.status)
+        .json({ error: response.data?.error?.message || "Spotify API error" });
+    }
+
+    const data = response.data;
+
+    return res.status(200).json({
+      isPlaying: data.is_playing,
+      song: {
+        name: data?.item?.name,
+        artists: data?.item?.artists?.map((a) => a.name).join(", "),
+        album: data?.item?.album?.name,
+        albumArt: data?.item?.album?.images?.[0]?.url,
+        previewUrl: data?.item?.preview_url,
+        externalUrl: data?.item?.external_urls?.spotify,
+      },
+    });
+  } catch (error) {
+    console.log(error.response.status);
+    console.error("Spotify Now Playing Error: ", error.message);
+    res
+      .status(500)
+      .json({ error: "Internal server error while fetching current song." });
+  }
+};
+
 module.exports = { login, callback, getTopTracks, getNowPlaying };

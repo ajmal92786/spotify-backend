@@ -6,12 +6,8 @@ const client_id = process.env.SPOTIFY_CLIENT_ID;
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
 const redirect_uri = process.env.SPOTIFY_REDIRECT_URI;
 
-// let access_token = "";
-// let refresh_token = "";
-let access_token =
-  "BQBXGTrPCHkG7aMkRu-HyCrvB4bgAvbHB7-nQHdvcmg8--OsmTJYuZWdXUNgIiP0EiP5dELKjNm--nD9bCZDl6lo6uBYqXF2L2guA7XVdvR-K5hs-JqUSzqL3V5ax5twt1fjeIMG2D6CusrXFpI_Pac52PeX3igA1fwGvPHTQa1agpUmPCh0Dz58pOk4a0o9gbHsM9v5McWbUg6osV7z2Qg_YaROPyT7-EslBwDDp5I7rO5r0feYoAscrjmV";
-let refresh_token =
-  "AQB6aKS2RPsuOp86AuSgFCKDdHOgYefoCYi0gAxSXkdG3lkFNHQrNaL0XEJKKvOAimhhJe4JwHO6GSqlX57IihDqYkpJByJJnQmLifPgfFMAQwTrbVzPEdtrJ7y2yzrWRDg";
+let access_token = "";
+let refresh_token = "";
 
 const getLoginURL = () => {
   const scope =
