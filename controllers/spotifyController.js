@@ -21,7 +21,6 @@ const callback = async (req, res) => {
 const getTopTracks = async (req, res) => {
   try {
     const accessToken = spotifyAuth.getAccessToken();
-    // console.log("Access Token: ", accessToken);
 
     const response = await axios.get(
       "https://api.spotify.com/v1/me/top/tracks?limit=10",
@@ -31,8 +30,6 @@ const getTopTracks = async (req, res) => {
         },
       }
     );
-
-    // console.log("Received response: ", response.data);
 
     const formattedTracks = response.data.items.map((track) => ({
       name: track.name,
@@ -98,19 +95,12 @@ const getNowPlaying = async (req, res) => {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-        // validateStatus: () => true, // Allow non-200 responses for custom handling
       }
     );
 
     if (response.status === 204 || !response.data || !response.data.item) {
       return res.status(200).json({ message: "No song is currently playing." });
     }
-
-    // if (response.status >= 400) {
-    //   return res
-    //     .status(response.status)
-    //     .json({ error: response.data?.error?.message || "Spotify API error" });
-    // }
 
     const data = response.data;
 
@@ -172,4 +162,78 @@ const getNowPlaying = async (req, res) => {
   }
 };
 
-module.exports = { login, callback, getTopTracks, getNowPlaying };
+const stopPlayback = async (req, res) => {
+  try {
+    const accessToken = spotifyAuth.getAccessToken();
+
+    await axios.put(
+      "https://api.spotify.com/v1/me/player/pause",
+      {}, // Empty request body
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    return res.status(200).json({ message: "Playback stopped successfully." });
+  } catch (error) {
+    // Detect if user is not a Premium user
+    if (
+      error.response &&
+      error.response?.status === 403 &&
+      error.response?.data?.error?.reason === "PREMIUM_REQUIRED"
+    ) {
+      return res.status(403).json({
+        error: "Premium required",
+        message: "This feature requires a Spotify Premium account.",
+      });
+    }
+
+    // If access token expired, try refreshing and retry once
+    if (error.response?.status === 401) {
+      try {
+        const newAccessToken = await spotifyAuth.refreshAccessToken();
+
+        await axios.put(
+          "https://api.spotify.com/v1/me/player/pause",
+          {}, // Empty request body
+          {
+            headers: {
+              Authorization: `Bearer ${newAccessToken}`,
+            },
+          }
+        );
+
+        return res.json({
+          message: "Playback stopped after refreshing token",
+        });
+      } catch (refreshError) {
+        // Detect if user is not a Premium user
+        if (
+          refreshError.response &&
+          refreshError.response?.status === 403 &&
+          refreshError.response?.data?.error?.reason === "PREMIUM_REQUIRED"
+        ) {
+          return res.status(403).json({
+            error: "Premium required",
+            message: "This feature requires a Spotify Premium account.",
+          });
+        }
+
+        console.error("Token refresh failed:", refreshError.message);
+        return res
+          .status(401)
+          .json({ error: "Token expired. Please re-authenticate." });
+      }
+    }
+
+    console.error(
+      "Error stopping playback:",
+      error.response?.data || error.message
+    );
+    res.status(500).json({ error: "Failed to stop playback" });
+  }
+};
+
+module.exports = { login, callback, getTopTracks, getNowPlaying, stopPlayback };
