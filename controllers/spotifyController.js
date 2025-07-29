@@ -166,6 +166,13 @@ const stopPlayback = async (req, res) => {
   try {
     const accessToken = spotifyAuth.getAccessToken();
 
+    // Validate access token
+    if (!accessToken) {
+      return res.status(401).json({
+        error: "Access token not found. Please login.",
+      });
+    }
+
     await axios.put(
       "https://api.spotify.com/v1/me/player/pause",
       {}, // Empty request body
@@ -206,7 +213,7 @@ const stopPlayback = async (req, res) => {
         );
 
         return res.json({
-          message: "Playback stopped after refreshing token",
+          message: "Playback stopped successfully",
         });
       } catch (refreshError) {
         // Detect if user is not a Premium user
@@ -236,4 +243,101 @@ const stopPlayback = async (req, res) => {
   }
 };
 
-module.exports = { login, callback, getTopTracks, getNowPlaying, stopPlayback };
+const playTrack = async (req, res) => {
+  const trackId = req.body.trackId;
+
+  if (!trackId) {
+    return res
+      .status(400)
+      .json({ error: "trackId is required in the request body." });
+  }
+  try {
+    const accessToken = spotifyAuth.getAccessToken();
+
+    // Validate access token
+    if (!accessToken) {
+      return res.status(401).json({
+        error: "Access token not found. Please login.",
+      });
+    }
+
+    await axios.put(
+      "https://api.spotify.com/v1/me/player/play",
+      {
+        uris: [`spotify:track:${trackId}`],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    res.json({ message: `Track ${trackId} started playing.` });
+  } catch (error) {
+    // Detect if user is not a Premium user
+    if (
+      error.response &&
+      error.response?.status === 403 &&
+      error.response?.data?.error?.reason === "PREMIUM_REQUIRED"
+    ) {
+      return res.status(403).json({
+        error: "Premium required",
+        message: "This feature requires a Spotify Premium account.",
+      });
+    }
+
+    // If access token expired, try refreshing and retry once
+    if (error.response?.status === 401) {
+      try {
+        const newAccessToken = await spotifyAuth.refreshAccessToken();
+
+        await axios.put(
+          "https://api.spotify.com/v1/me/player/play",
+          {
+            uris: [`spotify:track:${trackId}`],
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${newAccessToken}`,
+            },
+          }
+        );
+
+        res.json({ message: `Track ${trackId} started playing.` });
+      } catch (refreshError) {
+        // Detect if user is not a Premium user
+        if (
+          refreshError.response &&
+          refreshError.response?.status === 403 &&
+          refreshError.response?.data?.error?.reason === "PREMIUM_REQUIRED"
+        ) {
+          return res.status(403).json({
+            error: "Premium required",
+            message: "This feature requires a Spotify Premium account.",
+          });
+        }
+
+        console.error("Token refresh failed:", refreshError.message);
+        return res
+          .status(401)
+          .json({ error: "Token expired. Please re-authenticate." });
+      }
+    }
+
+    console.error(
+      "Error playing track:",
+      error.response?.data || error.message
+    );
+    res.status(500).json({ error: "Failed to start track playback" });
+  }
+};
+
+module.exports = {
+  login,
+  callback,
+  getTopTracks,
+  getNowPlaying,
+  stopPlayback,
+  playTrack,
+};

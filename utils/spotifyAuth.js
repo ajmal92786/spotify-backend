@@ -44,9 +44,6 @@ const exchangeCodeForToken = async (code) => {
   access_token = response.data.access_token;
   refresh_token = response.data.refresh_token;
 
-  console.log("Access Token: ", access_token);
-  console.log("Refresh Token: ", refresh_token);
-
   return { access_token, refresh_token };
 };
 
@@ -69,7 +66,6 @@ const refreshAccessToken = async () => {
   );
 
   access_token = response.data.access_token;
-  console.log("Refreshed Access Token: ", access_token);
 
   return access_token;
 };
